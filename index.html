@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Ecommerce Tutorías – Marcela Gómez</title>
+
+<!-- SDK de PayPal -->
+<script src="https://www.paypal.com/sdk/js?client-id=sb&currency=USD"></script>
+
+<style>
+  /* Paleta Negro + Dorado */
+  body {
+    font-family: system-ui;
+    background-color: #111;
+    color: #f5f5f5;
+    padding: 20px;
+    text-align: center;
+  }
+
+  h1 {
+    color: #C9A227;
+    margin-bottom: 25px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  #productos {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+
+  .producto {
+    border: 1px solid #C9A227;
+    background: #000;
+    border-radius: 10px;
+    padding: 12px;
+    width: 230px;
+    box-shadow: 0 0 10px rgba(201, 162, 39, 0.4);
+    transition: transform .2s;
+  }
+
+  .producto:hover {
+    transform: scale(1.05);
+  }
+
+  .producto img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 2px solid #C9A227;
+  }
+
+  .producto h3 {
+    color: #C9A227;
+    margin-top: 8px;
+  }
+
+  .producto p {
+    color: #fff;
+  }
+
+  .producto button,
+  .carrito button {
+    background-color: #C9A227;
+    border: none;
+    color: #000;
+    padding: 8px;
+    margin-top: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+  }
+
+  .producto button:hover,
+  .carrito button:hover {
+    background-color: #e3b94a;
+  }
+
+  /* Carrito */
+  .carrito {
+    margin-top: 40px;
+    padding: 20px;
+    background: #000;
+    border: 2px solid #C9A227;
+    border-radius: 12px;
+    width: 380px;
+    display: inline-block;
+    text-align: left;
+    box-shadow: 0 0 12px rgba(201, 162, 39, 0.4);
+  }
+
+  .carrito h2 {
+    color: #C9A227;
+  }
+
+  .carrito ul {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 10px;
+  }
+
+  .carrito li {
+    padding: 5px 0;
+    border-bottom: 1px solid #333;
+  }
+
+  .vaciar {
+    background-color: #8B0000;
+    color: #fff !important;
+  }
+
+  .vaciar:hover {
+    background-color: #b30000;
+  }
+
+  #paypal-button-container {
+    margin-top: 15px;
+  }
+</style>
+</head>
+
+<body>
+
+<h1>Ecommerce tutorías personalizadas de idiomas – Marcela Gómez</h1>
+
+<div id="productos"></div>
+
+<div class="carrito">
+  <h2>🧾 Carrito de Compras</h2>
+  <ul id="lista-carrito"></ul>
+  <p><strong>Total: $<span id="total">0.00</span></strong></p>
+
+  <button class="vaciar" onclick="vaciarCarrito()">🧼 Vaciar Carrito</button>
+
+  <!-- Botón Finalizar compra normal -->
+  <button id="finalizar">✅ Finalizar Compra</button>
+
+  <!-- Botón PayPal -->
+  <div id="paypal-button-container"></div>
+</div>
+
+<script>
+/* -------------------- PRODUCTOS -------------------- */
+const productos = [
+  {
+    id: 1,
+    nombre: "Tutorias virtuales",
+    precio: 25.00,
+    imagen: "https://recursos.educoas.org/sites/default/files/styles/cur_pic/public/mb/pictures/FTV%202.0.jpg?itok=y0cOdbZy"
+  },
+  {
+    id: 2,
+    nombre: "Tutorias presenciales individuales",
+    precio: 18.00,
+    imagen: "https://cecar.edu.co/cleo/images/clea/images/tutorias.png"
+  },
+  {
+    id: 3,
+    nombre: "Tutorias presenciales grupales",
+    precio: 30.00,
+    imagen: "https://estudiantes-argentina.unir.net/wp-content/uploads/sites/33/2019/11/Foto-profesora-tutotia-alumnos-unir.webp"
+  },
+  {
+    id: 5,
+    nombre: "Video tutorias",
+    precio: 22.00,
+    imagen: "https://brainspro.com/wp-content/uploads/2022/04/videotutorial.jpg"
+  }
+];
+
+const carrito = [];
+const contenedorProductos = document.getElementById("productos");
+const listaCarrito = document.getElementById("lista-carrito");
+const totalCarrito = document.getElementById("total");
+
+/* -------------------- FUNCIONES -------------------- */
+
+function mostrarProductos() {
+  productos.forEach(prod => {
+    const div = document.createElement("div");
+    div.className = "producto";
+    div.innerHTML = `
+      <img src="${prod.imagen}" alt="${prod.nombre}">
+      <h3>${prod.nombre}</h3>
+      <p>Precio: $${prod.precio.toFixed(2)}</p>
+      <button onclick="agregarAlCarrito(${prod.id})">Agregar al carrito</button>
+    `;
+    contenedorProductos.appendChild(div);
+  });
+}
+
+function agregarAlCarrito(id) {
+  const productoExistente = carrito.find(p => p.id === id);
+
+  if (productoExistente) {
+    productoExistente.cantidad++;
+  } else {
+    const producto = productos.find(p => p.id === id);
+    carrito.push({ ...producto, cantidad: 1 });
+  }
+  actualizarCarrito();
+}
+
+function actualizarCarrito() {
+  listaCarrito.innerHTML = "";
+  let total = 0;
+  let totalItems = 0;
+
+  carrito.forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = `${item.nombre} x${item.cantidad} – $${(item.precio * item.cantidad).toFixed(2)}`;
+    listaCarrito.appendChild(li);
+
+    total += item.precio * item.cantidad;
+    totalItems += item.cantidad;
+  });
+
+  totalCarrito.textContent = total.toFixed(2);
+
+  document.querySelector(".carrito h2").textContent =
+    `🧾 Carrito de Compras (${totalItems})`;
+}
+
+function vaciarCarrito() {
+  if (confirm("¿Estás seguro de que deseas vaciar el carrito?")) {
+    carrito.length = 0;
+    actualizarCarrito();
+  }
+}
+
+document.getElementById("finalizar").onclick = () => {
+  if (carrito.length === 0) {
+    alert("El carrito está vacío.");
+    return;
+  }
+  alert("🎉 ¡Gracias por tu compra! Recibirás un correo de confirmación.");
+  carrito.length = 0;
+  actualizarCarrito();
+};
+
+/* -------------------- PAYPAL -------------------- */
+
+paypal.Buttons({
+  createOrder: function(data, actions) {
+    const total = parseFloat(totalCarrito.textContent);
+
+    return actions.order.create({
+      purchase_units: [{
+        amount: {
+          value: total.toFixed(2)
+        }
+      }]
+    });
+  },
+
+  onApprove: function(data, actions) {
+    return actions.order.capture().then(function(details) {
+      alert("🎉 Pago completado por " + details.payer.name.given_name + "!");
+      carrito.length = 0;
+      actualizarCarrito();
+    });
+  }
+
+}).render('#paypal-button-container');
+
+/* Mostrar productos al inicio */
+mostrarProductos();
+</script>
+
+</body>
+</html>
